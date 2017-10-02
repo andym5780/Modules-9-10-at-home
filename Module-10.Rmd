@@ -1,0 +1,450 @@
+---
+title: "Module-10"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+#Testing Sample Means: One Sample Z and T Tests
+```{r}
+library(curl)
+f <- curl("https://raw.githubusercontent.com/fuzzyatelin/fuzzyatelin.github.io/master/AN597_Fall17/vervet-weights.csv")
+d <- read.csv(f, header = TRUE, sep = ",", stringsAsFactors = FALSE)
+head(d)
+```
+```{r}
+mean(d$weight)
+```
+Ho is that the mean is equal to 4.9
+Ha is the mean is greater than 4.9
+This is a upper-tailed test
+lets now test the mean, sd and SEM of the sample
+```{r}
+mu <- 4.9
+x <- d$weight
+m <- mean(x)
+m
+s <- sd(x)
+s
+n <- length(x)
+sem <- s/sqrt(n)
+sem
+```
+above are the mean, sd ad sem
+```{r}
+z <- (m - mu)/sem
+z
+```
+this is our z score, it is the estimated number of standard errors of the mean away from the population mean that our sample falls
+```{r}
+p <- 1 - pnorm(z)
+p
+```
+this is ouur p value
+```{r}
+p <- pnorm(z, lower.tail = FALSE)
+p
+```
+we use this because we want the upper part not the lower
+becasue our sample is limmited, we will use the t distrabution
+```{r}
+p <- 1 - pt(z, df = n - 1)
+p
+```
+this is the p value for t disrtabution
+```{r}
+p <- pt(z, df = n - 1, lower.tail = FALSE)
+p
+```
+```{r}
+t <- t.test(x = x, mu = mu, alternative = "greater")
+t
+```
+this means we reject the Ho and the mean is differnt this year.
+```{r}
+lower <- m - qt(1 - 0.05/2, df = n - 1) * sem
+upper <- m + qt(1 - 0.05/2, df = n - 1) * sem
+ci <- c(lower, upper)
+ci
+```
+this is calulating the CI bby hand
+```{r}
+t <- t.test(x = x, mu = mu, alternative = "two.sided")
+ci <- t$conf.int
+ci
+```
+this iscalculating the CI with R built in functions
+
+
+For this question about woolly monkeys, Ho is the mean weight is 7.2kg and Ha is the mean weight is not 7.2kg
+```{r}
+f <- curl("https://raw.githubusercontent.com/fuzzyatelin/fuzzyatelin.github.io/master/AN597_Fall17/woolly-weights.csv")
+d <- read.csv(f, header = TRUE, sep = ",", stringsAsFactors = FALSE)
+head(d)
+```
+```{r}
+x <- d$weight
+m <- mean(x)
+s <- sd(x)
+n <- length(x)
+sem <- s/sqrt(n)
+mu <- 7.2
+t <- (m - mu)/sem
+t
+```
+here ge got our t statistic by hand
+```{r}
+alpha <- 0.05
+crit <- qt(1 - alpha/2, df = n - 1)  # identify critical values
+test <- t < -crit || t > crit  # boolean test as two whether t is larger than the critical value at either tail
+test <- abs(t) > crit
+t.test(x = x, mu = mu, alternative = "two.sided")
+```
+here we got our T test using the built in t-tester in R
+here we reject Ho
+#Comparing Sample Means: Two Sample Z and T Tests
+```{r}
+f <- curl("https://raw.githubusercontent.com/fuzzyatelin/fuzzyatelin.github.io/master/AN597_Fall17/colobus-weights.csv")
+d <- read.csv(f, header = TRUE, sep = ",", stringsAsFactors = FALSE)
+head(d)
+```
+```{r}
+x <- d$weight[d$sex == "male"]
+y <- d$weight[d$sex == "female"]
+par(mfrow = c(1, 2))
+boxplot(x, ylim = c(4.5, 8), main = "Weight (kg)", xlab = "Males")
+boxplot(y, ylim = c(4.5, 8), main = "Weight (kg)", xlab = "Females")
+```
+```{r}
+m1 <- mean(x)
+m2 <- mean(y)
+mu <- 0  # you could leave this out... the default argument value is 0
+s1 <- sd(x)
+s2 <- sd(y)
+n1 <- length(x)
+n2 <- length(y)
+```
+```{r}
+t <- (m2 - m1 - mu)/sqrt(s2^2/n2 + s1^2/n1)
+t
+```
+here is our t statistic
+```{r}
+alpha <- 0.05
+crit <- qt(1 - alpha/2, df = n - 1)  # identify critical values
+crit
+```
+this is the critical value
+```{r}
+test <- t < -crit || t > crit  # boolean test
+test <- abs(t) > crit
+test
+```
+```{r}
+df <- (s2^2/n2 + s1^2/n1)^2/((s2^2/n2)^2/(n2 - 1) + (s1^2/n1)^2/(n1 - 1))
+df
+```
+calculating df is differnt here
+```{r}
+t <- t.test(x = x, y = y, mu = 0, alternative = "two.sided")
+t
+```
+here we use the t-test built in function
+here we reject Ho becaue 0 is not in the CI
+#Samples with Equal Variances
+```{r}
+s <- sqrt((((n1 - 1) * s1^2) + ((n2 - 1) * s2^2))/(n1 + n2 - 2))
+t <- (m2 - m1 - mu)/(sqrt(s^2 * (1/n1 + 1/n2)))
+t
+```
+this is our t-statistic
+```{r}
+df <- n1 + n2 - 2
+df
+```
+this is the df
+```{r}
+t <- t.test(x = x, y = y, mu = 0, var.equal = TRUE, alternative = "two.sided")
+t
+```
+```{r}
+var(x)/var(y)
+```
+beacuse this ratio is greater than 2 we must use a F test to see in our var are equale or not
+```{r}
+vt <- var.test(x, y)
+vt
+```
+hreject Ho, var1 not = to var2
+#Paired Samples
+```{r}
+f <- curl("https://raw.githubusercontent.com/fuzzyatelin/fuzzyatelin.github.io/master/AN597_Fall17/iqs.csv")
+d <- read.csv(f, header = TRUE, sep = ",", stringsAsFactors = FALSE)
+head(d)
+```
+```{r}
+x <- d$IQ.before - d$IQ.after
+m <- mean(x)
+mu <- 0  # can leave this out
+s <- sd(x)
+n <- length(x)
+sem <- s/sqrt(n)
+par(mfrow = c(1, 2))
+boxplot(d$IQ.before, ylim = c(115, 145), main = "IQ", xlab = "Before")
+boxplot(d$IQ.after, ylim = c(115, 145), main = "IQ", xlab = "After")
+```
+```{r}
+t <- (m - mu)/sem
+t
+```
+```{r}
+alpha <- 0.05
+crit <- qt(1 - alpha/2, df = n - 1)  # identify critical values
+crit
+```
+```{r}
+test <- t < -crit || t > crit  # boolean test
+test
+```
+here we calculated the t test by hand and Ho is rejected
+```{r}
+t.test(x, df = n - 1, alternative = "two.sided")
+```
+here we dd the T test in R and Ho is rejected
+#Testing Sample Proportions: One Sample Z Test
+```{r}
+pop <- c(rep(0, 500), rep(1, 500))
+```
+here we created a population of 500 1s and 500 0s
+```{r}
+pi <- 0.5
+x <- NULL
+n <- 10
+for (i in 1:1000) {
+    x[i] <- mean(sample(pop, size = n, replace = FALSE))  # taking the mean of a bunch of 0s and 1s yields the proportion of 1s!
+}
+m <- mean(x)
+m
+```
+this is the population mean
+```{r}
+s <- sd(x)
+s
+```
+this is the population sd
+```{r}
+pop_se <- sqrt(pi * (1 - pi)/n)
+pop_se
+```
+this is the population se
+```{r}
+pop <- c(rep(0, 800), rep(1, 200))
+pi <- 0.8
+x <- NULL
+n <- 10
+for (i in 1:1000) {
+    x[i] <- mean(sample(pop, size = n, replace = FALSE))  # taking the mean of a bunch of 0s and 1s yields the proportion of 1s!
+}
+m <- mean(x)
+m
+```
+here we created a population with 800 1s and 200 0s, and apove is the pop mean
+```{r}
+s <- sd(x)
+s
+```
+this is pop sd
+```{r}
+pop_se <- sqrt(pi * (1 - pi)/n)
+pop_se
+```
+this is pop se
+
+#challenge for neotropical ornithologist
+Ho is p is equal to 80%
+Ha is p is less than 80%
+```{r}
+30*.8
+30*(1-.8)
+```
+both are greater than 5 so we may continue
+```{r}
+v <- c(0, 1, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 1, 1, 0, 0, 1, 1, 1, 0, 
+    1, 1, 0, 1, 0, 1, 1)
+```
+these are the results
+```{r}
+phat <- mean(v)
+phat
+```
+this is the test statistic
+```{r}
+pi <- 0.8
+n <- 30
+z <- (phat - pi)/sqrt(pi * (1 - pi)/30)
+z
+```
+this is the z value
+```{r}
+p <- pnorm(z, lower.tail = TRUE)
+p
+```
+```{r}
+lower <- phat - qnorm(0.975) * sqrt(phat * (1 - phat)/30)
+upper <- phat + qnorm(0.975) * sqrt(phat * (1 - phat)/30)
+ci <- c(lower, upper)
+ci
+```
+this is the CI
+from this data we reject Ho becasue pi is not in the CI
+```{r}
+pt <- prop.test(x = sum(v), n = length(v), p = 0.8, conf.level = 0.95, correct = FALSE, 
+    alternative = "less")
+pt
+```
+we use the built in R function and get the same result
+#Comparing Sample Proportions: Two Sample Z Tests
+testing bats challange
+```{r}
+v1 <- c(1, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 
+    1, 0)
+v2 <- c(1, 1, 0, 0, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 
+    0, 1, 1, 0, 1, 1, 1)
+```
+Ho is mean1-mean2=0, Ha is mean1-mean2 does not = 0
+```{r}
+pstar <- (sum(v1) + sum(v2))/(length(v1) + length(v2))
+pstar
+```
+```{r}
+phat1 <- mean(v1)
+phat1
+```
+test statistic for v1
+```{r}
+phat2 <- mean(v2)
+phat2
+```
+test statistic for v2
+```{r}
+pi <- 0
+z <- (phat2 - phat1)/sqrt((pstar * (1 - pstar)) * (1/length(v1) + 1/length(v2)))
+z
+```
+this is the z avalue
+```{r}
+p <- 1 - pnorm(z, lower.tail = TRUE) + pnorm(z, lower.tail = FALSE)
+p
+```
+```{r}
+crit <- qnorm(1 - alpha/2)  # identify critical values
+crit
+```
+this gives the critical value
+```{r}
+test <- p < -crit || p > crit  # boolean test
+test
+```
+```{r}
+pt <- prop.test(x = c(sum(v2), sum(v1)), n = c(length(v2), length(v1)), alternative = "two.sided", 
+    correct = FALSE)
+pt
+```
+I think these results mean that v1 and v2 are equal to eachother b/c 0 is in the CI so do not reject Ho
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
