@@ -54,8 +54,7 @@ legend("top", c("df1=1,df2=1", "df1=2,df2=2", "df1=4,df2=4", "df1=8,df2=6",
 
 fcrit <- qf(p = 0.95, df1 = 1, df2 = 998)
 fcrit
-```
-```{r, eval=FALSE}
+
 abline(v = fcrit)
 abline(h = 0)
 polygon(cbind(c(fcrit, seq(from = fcrit, to = 10, length.out = 1000), 8), c(0, 
