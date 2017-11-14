@@ -1,0 +1,221 @@
+---
+title: "Module-18"
+output: html_document
+---
+```{r}
+library(curl)
+library(ggplot2)
+library(lme4)
+library(AICcmodavg)
+library(MuMIn)
+library(knitr)
+```
+#Mixed Effects Models
+```{r}
+library(curl)
+f <- curl("https://raw.githubusercontent.com/fuzzyatelin/fuzzyatelin.github.io/master/AN597_Fall17/chimpgrooming.csv")
+d <- read.csv(f, header = TRUE, sep = ",")
+head(d)
+```
+```{r}
+summary(d)
+```
+```{r}
+# first, some exploratory visualization let's plot grooming received
+# duration in relation to subject ID
+par(mfrow = c(1, 1))
+boxplot(data = d, duration ~ subject, col = c("lightpink1"))
+```
+```{r}
+# we see lots of individual variation let's plot grooming received duration
+# in relation to reproductive condition
+boxplot(data = d, duration ~ reprocondition, col = c("burlywood2", "lightpink1"))
+```
+```{r}
+# let's plot grooming received duration in relation to reproductive
+# condition and parity
+boxplot(data = d, duration ~ reprocondition * parity, col = c("burlywood2", 
+    "lightpink1"))
+```
+```{r}
+boxplot(data = d, duration ~ reprocondition * subject, col = c("burlywood2", 
+    "lightpink1"))
+```
+##Random Intercept Models
+```{r}
+lme <- lmer(data = d, duration ~ reprocondition + parity + (1 | subject))
+summary(lme)
+```
+```{r}
+coefficients(lme)
+```
+#Statistical Significance in Mixed Effects Models
+```{r}
+full <- lmer(data = d, duration ~ reprocondition + parity + (1 | subject), REML = FALSE)
+summary(full)
+```
+```{r}
+reduced <- lmer(data = d, duration ~ parity + (1 | subject), REML = FALSE)
+summary(reduced)
+```
+```{r}
+anova(reduced, full, test = "Chisq")
+```
+```{r}
+full <- lmer(data = d, duration ~ reprocondition + parity + (1 | subject), REML = FALSE)
+reduced <- lmer(data = d, duration ~ reprocondition + (1 | subject), REML = FALSE)
+anova(reduced, full, test = "Chisq")
+```
+```{r}
+full <- lmer(data = d, duration ~ reprocondition * parity + (1 | subject), REML = FALSE)
+reduced <- lmer(data = d, duration ~ reprocondition + parity + (1 | subject), 
+    REML = FALSE)
+anova(reduced, full, test = "Chisq")
+```
+#Random Slope Models
+```{r}
+lme <- lmer(data = d, duration ~ reprocondition + parity + (1 + reprocondition | 
+    subject) + (1 + parity | subject), REML = FALSE)
+summary(lme)
+```
+```{r}
+coefficients(lme)
+```
+```{r}
+# reproductive condition
+full <- lmer(data = d, duration ~ reprocondition + parity + (1 + reprocondition | 
+    subject) + (1 + parity | subject), REML = FALSE)
+reduced <- lmer(data = d, duration ~ parity + (1 + reprocondition | subject) + 
+    (1 + parity | subject), REML = FALSE)
+anova(reduced, full, test = "Chisq")
+```
+```{r}
+# parity
+full <- lmer(data = d, duration ~ reprocondition + parity + (1 + reprocondition | 
+    subject) + (1 + parity | subject), REML = FALSE)
+null <- lmer(data = d, duration ~ reprocondition + (1 + reprocondition | subject) + 
+    (1 + parity | subject), REML = FALSE)
+anova(reduced, full, test = "Chisq")
+```
+#Determining Model Fit
+```{r}
+print(aictab(list(full, reduced, null), c("full", "reduced", "null")), LL = FALSE)
+```
+```{r}
+r.squaredGLMM(full)
+```
+```{r}
+r.squaredGLMM(reduced)
+```
+```{r}
+r.squaredGLMM(null)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
