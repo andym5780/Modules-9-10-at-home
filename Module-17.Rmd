@@ -1,0 +1,393 @@
+---
+title: "Module-17"
+output: html_document
+---
+```{r}
+library(curl)
+library(ggplot2)
+library(broom)
+library(lmtest)
+library(knitr)
+```
+#Generalized Linear Models
+##Logistic Regression
+```{r}
+library(curl)
+f <- curl("https://raw.githubusercontent.com/fuzzyatelin/fuzzyatelin.github.io/master/AN597_Fall17/graddata.csv")
+d <- read.csv(f, header = TRUE, sep = ",")
+head(d)
+```
+```{r}
+summary(d)
+```
+```{r}
+# first, some exploratory visualization
+par(mfrow = c(1, 2))
+plot(as.factor(d$admit), d$gpa, xlab = "Admit", ylab = "GPA", col = "lightgreen")
+plot(as.factor(d$admit), d$gre, xlab = "Admit", ylab = "GRE", col = "lightblue")
+```
+```{r}
+pairs(d)
+```
+```{r}
+table(d$admit, d$rank)
+```
+```{r}
+# glm of admit~gre
+glm <- glm(data = d, admit ~ gre, family = "binomial")
+summary(glm)
+```
+```{r}
+x <- seq(from = min(d$gre), to = max(d$gre), length.out = 1000)
+logOR <- predict(glm, newdata = data.frame(gre = x))  # this function will predict the log(odds ratio)... but if we add the argument type='response', the predict() function will return the expected response on the scale of the Y variable, i.e., Pr(Y)=1, rather than the odds ratio!
+y <- predict(glm, newdata = data.frame(gre = x), type = "response")
+plot(d$admit ~ d$gre, pch = 21, type = "p", xlab = "GRE Score", ylab = "Pr(Y)", 
+    main = "Pr(Y) versus GRE")
+lines(y ~ x, type = "l")
+```
+```{r}
+ORchange <- exp(glm$coefficients[2])
+ORchange  # a 1 unit increase in gre results in a 0.36% increase in likelihood of admission
+```
+```{r}
+glmresults <- tidy(glm)
+wald <- glmresults$estimate[2]/glmresults$std.error[2]
+p <- 2 * (1 - pnorm(wald))  # calculation of 2 tailed p value associated with the Wald statistic
+p
+```
+```{r}
+CI <- confint(glm, level = 0.95)  # this function returns a CI based on log-likelihood, an iterative ML process
+```
+```{r}
+CI
+```
+```{r}
+CI <- confint.default(glm, level = 0.95)  # this function returns CIs based on standard errors, the way we have calculated them by hand previously... note the slight difference
+CI
+```
+```{r}
+CI <- glmresults$estimate[2] + c(-1, 1) * qnorm(0.975) * glmresults$std.error[2]  # and this is how we have calculated CIs by hand previously
+CI
+```
+```{r}
+glm <- glm(data = d, admit ~ gpa, family = "binomial")
+summary(glm)
+```
+```{r}
+coeffs <- glm$coefficients
+coeffs
+```
+```{r}
+CI <- confint(glm, level = 0.95)
+```
+```{r}
+CI
+```
+```{r}
+ORchange <- exp(coeffs[2])
+ORchange
+```
+```{r}
+ORchangeCI <- exp(CI[2, ])
+ORchangeCI
+```
+```{r}
+x <- data.frame(gpa = seq(from = 2, to = 4, length.out = 100))
+prediction <- cbind(gpa = x, response = predict(glm, newdata = x, type = "response"))
+# IMPORTANT: Using type='response' returns predictions on the scale of our Y
+# variable, in this case Pr(admit); using the default for type would return
+# a prediction on the logit scale, i.e., the log(odds ratio), or
+# log(Pr(admit)/(1-Pr(admit)))
+head(prediction)
+```
+```{r}
+p <- ggplot(prediction, aes(x = gpa, y = response)) + geom_line() + xlab("GPA") + 
+    ylab("Pr(admit)")
+p
+```
+```{r}
+prediction <- cbind(gpa = x, predict(glm, newdata = x, type = "response", se = TRUE))
+prediction$LL <- prediction$fit - 1.96 * prediction$se.fit
+prediction$UL <- prediction$fit + 1.96 * prediction$se.fit
+head(prediction)
+```
+```{r}
+p <- ggplot(prediction, aes(x = gpa, y = fit))
+p <- p + geom_ribbon(aes(ymin = LL, ymax = UL), alpha = 0.2) + geom_line() + 
+    xlab("GPA") + ylab("Pr(admit)")
+p <- p + geom_point(data = d, aes(x = gpa, y = admit))
+p
+```
+##Likelihood Ratio Tests
+```{r}
+glm1 <- glm(data = d, admit ~ 1, family = "binomial")
+glm2 <- glm(data = d, admit ~ gpa, family = "binomial")
+anova(glm1, glm2, test = "Chisq")
+```
+```{r}
+lrtest(glm1, glm2)
+```
+```{r}
+Dglm1 <- glm1$deviance  # intercept only model
+Dglm1
+```
+```{r}
+Dglm1 <- deviance(glm1)
+Dglm1
+```
+```{r}
+Dglm2 <- glm2$deviance  # model with intercept and one predictor
+Dglm2
+```
+```{r}
+Dglm2 <- deviance(glm2)
+Dglm2
+```
+```{r}
+chisq <- Dglm1 - Dglm2  # this is a measure of how much the fit improves by adding in the predictor
+chisq
+```
+```{r}
+p <- 1 - pchisq(chisq, df = 1)  # df = difference in number of parameters in the full verus reduced model
+p
+```
+```{r}
+x2 <- glm1$null.deviance - glm1$deviance
+x2  # why is this 0? because glm1 *is* the intercept only model!
+```
+```{r}
+p <- 1 - pchisq(x2, df = 1)
+p
+```
+```{r}
+x2 <- glm2$null.deviance - glm2$deviance
+x2
+```
+```{r}
+p <- 1 - pchisq(x2, df = 1)  # df = difference in number of parameters in the full verus reduced model
+p
+```
+#Multiple Logistic Regression
+```{r}
+d$rank <- as.factor(d$rank)  # make sure rank is a categorical variable
+glmGGR <- glm(data = d, formula = admit ~ gpa + gre + rank, family = binomial)  # 3 predictor model
+summary(glmGGR)
+```
+```{r}
+coeff <- glmGGR$coefficients  # extract coefficients... all significantly different from 0
+coeffCI <- cbind(coeff, confint(glmGGR))  # and 95% CIs around them... none include 0
+```
+```{r}
+coeffCI
+```
+```{r}
+ORcoeff <- exp(coeff)
+ORcoeff
+```
+```{r}
+ORcoeffCI <- exp(coeffCI)
+ORcoeffCI
+```
+```{r}
+# Compare 2 verus 3 factor models
+glmGG <- glm(data = d, formula = admit ~ gpa + gre, family = binomial)
+glmGR <- glm(data = d, formula = admit ~ gpa + rank, family = binomial)
+glmRG <- glm(data = d, formula = admit ~ gre + rank, family = binomial)
+anova(glmGG, glmGGR, test = "Chisq")
+```
+```{r}
+anova(glmGR, glmGGR, test = "Chisq")
+```
+```{r}
+anova(glmRG, glmGGR, test = "Chisq")
+```
+```{r}
+# Compare model with and model without interactions
+glmNO <- glm(data = d, admit ~ rank + gpa + gre, family = "binomial")
+glmALL <- glm(data = d, admit ~ rank * gpa * gre, family = "binomial")
+anova(glmNO, glmALL, test = "Chisq")  # adding interaction terms to model doesn't significantly decrease deviance
+```
+#Log-Linear or Poisson Regression
+```{r}
+f <- curl("https://raw.githubusercontent.com/fuzzyatelin/fuzzyatelin.github.io/master/AN597_Fall17/woollydata.csv")
+d <- read.csv(f, header = TRUE, sep = ",")
+head(d)
+```
+```{r}
+summary(d)
+```
+```{r}
+# first, some exploratory visualization
+par(mfrow = c(1, 1))
+p <- ggplot(data = d, aes(x = age, y = success)) + geom_point() + xlab("Age") + 
+    ylab("Mating Success")
+p
+```
+```{r}
+pairs(d)
+```
+```{r}
+table(d$rank, d$success)
+```
+```{r}
+# glm of success~age
+glm <- glm(data = d, success ~ age, family = "poisson")
+summary(glm)
+```
+```{r}
+coeffs <- glm$coefficients
+coeffs
+```
+```{r}
+CIs <- confint(glm, level = 0.95)  # uses ML approaches
+```
+```{r}
+CIs
+```
+```{r}
+CIs <- confint(glm, level = 0.95)  # uses standard errors
+```
+```{r}
+CIs
+```
+```{r}
+x <- data.frame(age = seq(from = 5, to = 17, length.out = 30))
+prediction <- cbind(age = x, predict(glm, newdata = x, type = "response", se = TRUE))
+# IMPORTANT: Using the argument type='response' makes our prediction be
+# units of our actual Y variable (success) rather than log(success)
+prediction$LL <- prediction$fit - 1.96 * prediction$se.fit
+prediction$UL <- prediction$fit + 1.96 * prediction$se.fit
+head(prediction)
+```
+```{r}
+p <- p + geom_line(data = prediction, aes(x = age, y = fit)) + geom_ribbon(data = prediction, 
+    aes(x = age, y = fit, ymin = LL, ymax = UL), alpha = 0.2) + xlab("Age") + 
+    ylab("Mating Success")
+p  # note the curvilinear 'line' of best fit
+```
+```{r}
+glm1 <- glm(data = d, success ~ 1, family = "poisson")
+glm2 <- glm(data = d, success ~ age, family = "poisson")
+# using the anova function
+anova(glm1, glm2, test = "Chisq")
+```
+```{r}
+# based on the deviance between a specified null and full models
+x2 <- glm1$deviance - glm2$deviance
+x2
+```
+```{r}
+p <- 1 - pchisq(x2, df = 1)
+p
+```
+```{r}
+# based on hand calculating deviance for each model; logLik() function
+# returns the log-likelihood of a model
+Dglm1 = -2 * logLik(glm1)
+Dglm1
+```
+```{r}
+Dglm2 = -2 * logLik(glm2)
+Dglm2
+```
+```{r}
+x2 <- as.numeric(Dglm1 - Dglm2)
+x2
+```
+```{r}
+p <- 1 - pchisq(x2, df = 1)  # df = difference in number of parameters in the full verus reduced model
+p
+```
+```{r}
+AIC <- 2 * 2 - 2 * logLik(glm2)  # formula for AIC = 2 * # params estimated - 2 * log-likelihood of model; for thise model we estimated 2 params
+AIC
+```
+```{r}
+AICreduced <- 2 * 1 - 2 * logLik(glm1)  # for this model, 1 param is estimated
+AICreduced
+```
+```{r}
+# glm of success~age
+glm1 <- glm(data = d, success ~ rank, family = "poisson")
+summary(glm1)
+```
+```{r}
+coeffs <- glm1$coefficients
+coeffs
+```
+```{r}
+CIs <- confint(glm1, level = 0.95)
+```
+```{r}
+CIs
+```
+```{r}
+# glm of success~age+rank
+glm2 <- glm(data = d, success ~ age + rank, family = "poisson")
+summary(glm2)
+```
+```{r}
+coeffs <- glm2$coefficients
+coeffs
+```
+```{r}
+CIs <- confint(glm2, level = 0.95)
+```
+```{r}
+CIs
+```
+```{r}
+# glm of success~age+rank+age:rank
+glm3 <- glm(data = d, success ~ age * rank, family = "poisson")
+summary(glm3)
+```
+```{r}
+coeffs <- glm3$coefficients
+coeffs
+```
+```{r}
+CIs <- confint(glm3, level = 0.95)
+```
+```{r}
+CIs
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
