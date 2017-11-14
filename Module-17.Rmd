@@ -351,8 +351,10 @@ CIs <- confint(glm3, level = 0.95)
 ```{r}
 CIs
 ```
-
-
+```{r}
+anova(glm2, glm3, test="Chisq")
+```
+there is no significant diffrence between these two models, so we must chose the one which is less complex which is glm2
 
 
 

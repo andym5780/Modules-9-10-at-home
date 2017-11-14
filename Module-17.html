@@ -712,6 +712,15 @@ coeffs</code></pre>
 ## rankmedium     -0.74201052 1.10847589
 ## age:ranklow    -0.11693019 0.02081384
 ## age:rankmedium -0.08936412 0.06896883</code></pre>
+<pre class="r"><code>anova(glm2, glm3, test=&quot;Chisq&quot;)</code></pre>
+<pre><code>## Analysis of Deviance Table
+## 
+## Model 1: success ~ age + rank
+## Model 2: success ~ age * rank
+##   Resid. Df Resid. Dev Df Deviance Pr(&gt;Chi)
+## 1        56     52.905                     
+## 2        54     50.925  2   1.9806   0.3715</code></pre>
+<p>there is no significant diffrence between these two models, so we must chose the one which is less complex which is glm2</p>
 </div>
 
 
